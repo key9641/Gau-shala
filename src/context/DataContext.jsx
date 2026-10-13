@@ -9,6 +9,7 @@ export const DataProvider = ({ children }) => {
   const [missingCows, setMissingCows] = useState([])
   const [sightings, setSightings] = useState([])
   const [donations, setDonations] = useState([])
+  const [enquiries, setEnquiries] = useState([])
   const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -137,7 +138,7 @@ export const DataProvider = ({ children }) => {
     try {
       const added = await api.submitDonationClaim(donationData)
       setDonations(prev => [added, ...prev])
-      showToast(`Thank you ${added.donor_name}! Your donation claim of ₹${added.amount.toLocaleString('en-IN')} has been received.`, 'success')
+      showToast(`Thank you ${added.donor_name}! Your ₹${Number(added.amount).toLocaleString('en-IN')} donation details are pending verification.`, 'success')
       return added
     } catch (err) {
       showToast(err.message || 'Failed to submit donation claim', 'error')
@@ -152,6 +153,29 @@ export const DataProvider = ({ children }) => {
       showToast(`Donation marked as ${status}.`)
     } catch (err) {
       showToast(err.message || 'Failed to update donation', 'error')
+      throw err
+    }
+  }
+
+  const refreshEnquiries = useCallback(async () => {
+    const records = await api.fetchEnquiries()
+    setEnquiries(records)
+    return records
+  }, [])
+
+  const submitEnquiry = async (enquiryData) => {
+    const saved = await api.saveEnquiry(enquiryData)
+    return saved
+  }
+
+  const changeEnquiryStatus = async (id, status) => {
+    try {
+      const updated = await api.updateEnquiryStatus(id, status)
+      setEnquiries(prev => prev.map(enquiry => enquiry.id === id ? updated : enquiry))
+      showToast('Enquiry status updated.')
+      return updated
+    } catch (err) {
+      showToast(err.message || 'Failed to update enquiry', 'error')
       throw err
     }
   }
@@ -171,6 +195,7 @@ export const DataProvider = ({ children }) => {
 
   const resetAllData = () => {
     api.resetDataStore()
+    setEnquiries([])
     loadAllData()
     showToast('Database reset to original sample records.', 'info')
   }
@@ -178,10 +203,6 @@ export const DataProvider = ({ children }) => {
   // Computed statistics
   const stats = {
     totalCows: cows.length,
-    healthyCows: cows.filter(c => c.health_status === 'healthy').length,
-    underObservation: cows.filter(c => c.health_status === 'under_observation').length,
-    underTreatment: cows.filter(c => c.health_status === 'under_treatment').length,
-    criticalCows: cows.filter(c => c.health_status === 'critical').length,
     missingCowsCount: missingCows.filter(m => m.status === 'missing').length,
     foundCowsCount: missingCows.filter(m => m.status === 'found').length,
     breedsCount: breeds.length,
@@ -196,6 +217,7 @@ export const DataProvider = ({ children }) => {
       missingCows,
       sightings,
       donations,
+      enquiries,
       settings,
       stats,
       loading,
@@ -211,6 +233,9 @@ export const DataProvider = ({ children }) => {
       reportSighting,
       submitDonation,
       verifyDonation,
+      submitEnquiry,
+      refreshEnquiries,
+      changeEnquiryStatus,
       updateSettings,
       resetAllData,
       refreshData: loadAllData

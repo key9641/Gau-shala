@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import {
   MapPin,
   Phone,
-  Mail,
   Clock,
   Send,
   CheckCircle2,
@@ -10,11 +9,15 @@ import {
   Sparkles,
   Navigation
 } from 'lucide-react'
+import { GAUSHALA_CONTACT } from '../data/gaushalaContact'
+import { GAUSHALA_LOCATION } from '../data/gaushalaLocation'
 import { useData } from '../context/DataContext'
+import { isSupabaseConfigured } from '../services/supabase'
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const INDIAN_MOBILE_PATTERN = /^\+91[6-9]\d{9}$/
 
 export const Contact = () => {
-  const { settings, showToast } = useData()
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,23 +26,44 @@ export const Contact = () => {
     message: ''
   })
   const [submitted, setSubmitted] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const { submitEnquiry } = useData()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.email || !formData.message) {
-      showToast('Please fill in Name, Email, and Message.', 'error')
+
+    const email = formData.email.trim()
+    const normalizedPhone = formData.phone.replace(/[\s().-]/g, '')
+
+    if (!EMAIL_PATTERN.test(email)) {
+      setFormError('Enter a valid email address, such as name@example.com.')
       return
     }
 
-    setSubmitted(true)
-    showToast('Your message has been sent to the Gaushala trustees. We will reply promptly!', 'success')
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      subject: '',
-      message: ''
-    })
+    if (!INDIAN_MOBILE_PATTERN.test(normalizedPhone)) {
+      setFormError('Enter +91 followed by a valid 10-digit Indian mobile number.')
+      return
+    }
+
+    setFormError('')
+    setSubmitting(true)
+    try {
+      await submitEnquiry({
+        name: formData.name.trim(),
+        email: email.toLowerCase(),
+        phone: normalizedPhone,
+        subject: formData.subject.trim() || 'General Inquiry',
+        message: formData.message.trim()
+      })
+      setSubmitted(true)
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' })
+    } catch (err) {
+      console.error('Failed to submit contact enquiry:', err)
+      setFormError(err.message || 'We could not save your enquiry. Please try again or call the Gaushala.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -72,10 +96,15 @@ export const Contact = () => {
           {submitted ? (
             <div className="p-8 text-center bg-emerald-50 rounded-2xl border border-emerald-200 space-y-3">
               <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
-              <h3 className="text-xl font-bold text-emerald-900">Thank You! Message Received</h3>
+              <h3 className="text-xl font-bold text-emerald-900">Your enquiry has been recorded</h3>
               <p className="text-xs text-emerald-700 max-w-sm mx-auto">
-                Your communication has been forwarded to our Gaushala Caretaker Office. Om Shanti.
+                The Gaushala team can review it in the Admin Panel under Enquiries. It is not sent by email.
               </p>
+              {!isSupabaseConfigured && (
+                <p className="text-[11px] text-amber-800 max-w-sm mx-auto">
+                  This preview is saving data in this browser only. Connect Supabase to share enquiries across devices.
+                </p>
+              )}
               <button
                 onClick={() => setSubmitted(false)}
                 className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800 transition-colors"
@@ -85,6 +114,12 @@ export const Contact = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {formError && (
+                <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                  {formError}
+                </p>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
@@ -107,8 +142,12 @@ export const Contact = () => {
                   <input
                     type="email"
                     required
+                    autoComplete="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value })
+                      setFormError('')
+                    }}
                     placeholder="name@example.com"
                     className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-gau-green-500"
                   />
@@ -118,15 +157,22 @@ export const Contact = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
-                    Phone Number
+                    Phone Number *
                   </label>
                   <input
                     type="tel"
+                    required
+                    autoComplete="tel"
+                    maxLength={20}
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+91 98765 00000"
+                    onChange={(e) => {
+                      setFormData({ ...formData, phone: e.target.value })
+                      setFormError('')
+                    }}
+                    placeholder="+91 98765 43210"
                     className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-gau-green-500"
                   />
+                  <p className="mt-1 text-[11px] text-stone-500">Use +91 followed by 10 digits. Spaces and hyphens are okay.</p>
                 </div>
 
                 <div>
@@ -142,7 +188,7 @@ export const Contact = () => {
                     <option value="Sanctuary Visit">Planning a Gaushala Visit</option>
                     <option value="Cow Adoption">Cow Adoption & Sponsorship</option>
                     <option value="Emergency Rescue">Injured Cow Rescue Alert</option>
-                    <option value="Donation Query">80G Donation Receipt / Tax Query</option>
+                    <option value="Donation Query">Donation or Payment Query</option>
                     <option value="Volunteering">Volunteering Opportunities</option>
                   </select>
                 </div>
@@ -164,10 +210,11 @@ export const Contact = () => {
 
               <button
                 type="submit"
-                className="w-full py-3.5 bg-gau-green-700 hover:bg-gau-green-800 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                disabled={submitting}
+                className="w-full py-3.5 bg-gau-green-700 hover:bg-gau-green-800 disabled:opacity-60 disabled:cursor-wait text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
               >
                 <Send className="w-4 h-4" />
-                <span>Submit Message</span>
+                <span>{submitting ? 'Submitting…' : 'Submit Message'}</span>
               </button>
             </form>
           )}
@@ -187,7 +234,7 @@ export const Contact = () => {
                 <div>
                   <p className="font-bold text-stone-900 text-sm">Physical Address</p>
                   <p className="text-stone-600 mt-0.5">
-                    {settings?.address || 'GauSeva Sanctuary, Vedic Marg, Mathura-Vrindavan Road, UP 281001'}
+                    {GAUSHALA_LOCATION.address}
                   </p>
                 </div>
               </li>
@@ -197,19 +244,12 @@ export const Contact = () => {
                   <Phone className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-bold text-stone-900 text-sm">Phone & Helpline</p>
-                  <p className="text-stone-600 mt-0.5">{settings?.phone || '+91 98765 43210'}</p>
-                  <p className="text-emerald-700 font-bold mt-0.5">24x7 Emergency: 1800-120-4287</p>
-                </div>
-              </li>
-
-              <li className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-blue-100 text-blue-800 shrink-0">
-                  <Mail className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="font-bold text-stone-900 text-sm">Official Email</p>
-                  <p className="text-stone-600 mt-0.5">{settings?.email || 'seva@gauseva.org'}</p>
+                  <p className="font-bold text-stone-900 text-sm">Call the Gaushala</p>
+                  <div className="mt-1.5 space-y-1">
+                    {GAUSHALA_CONTACT.phoneNumbers.map((phone) => (
+                      <a key={phone.href} href={phone.href} className="block text-stone-600 hover:text-gau-green-800">{phone.display}</a>
+                    ))}
+                  </div>
                 </div>
               </li>
 
@@ -220,9 +260,8 @@ export const Contact = () => {
                 <div>
                   <p className="font-bold text-stone-900 text-sm">Visiting & Darshan Hours</p>
                   <p className="text-stone-600 mt-0.5">
-                    {settings?.visiting_hours || 'Daily: 6:00 AM – 12:00 PM & 3:30 PM – 7:30 PM'}
+                    Daily: 6:00 AM – 8:00 PM
                   </p>
-                  <p className="text-[11px] text-stone-400 mt-0.5">Special Aarti at 6:30 PM daily</p>
                 </div>
               </li>
             </ul>
@@ -238,10 +277,10 @@ export const Contact = () => {
               <span className="text-[10px] uppercase font-bold text-stone-400">GPS Coords</span>
             </div>
             <p className="text-xs text-stone-300 leading-relaxed">
-              Located 12 km off the Yamuna Expressway on Mathura-Vrindavan Road. Ample visitor parking and wheelchair accessible pavilions available.
+              Find us in Roorkee, Uttarakhand. Open the map for the exact pin and directions to the gaushala.
             </p>
             <a
-              href="https://maps.google.com/?q=Mathura+Vrindavan"
+              href={GAUSHALA_LOCATION.directionsUrl}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors"

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Routes, Route, useLocation, Link } from 'react-router-dom'
+import { Routes, Route, useLocation, Link, Navigate } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { Toast } from './components/Toast'
@@ -9,7 +9,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { Home } from './pages/Home'
 import { About } from './pages/About'
 import { Donate } from './pages/Donate'
-import { CowHealth } from './pages/CowHealth'
+import { DonateCow } from './pages/DonateCow'
 import { CowDetails } from './pages/CowDetails'
 import { FindMe } from './pages/FindMe'
 import { Breeds } from './pages/Breeds'
@@ -37,7 +37,8 @@ export function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/donate" element={<Donate />} />
-          <Route path="/health" element={<CowHealth />} />
+          <Route path="/donate-a-cow" element={<DonateCow />} />
+          <Route path="/health" element={<Navigate to="/" replace />} />
           <Route path="/cow/:id" element={<CowDetails />} />
           <Route path="/find-me" element={<FindMe />} />
           <Route path="/breeds" element={<Breeds />} />

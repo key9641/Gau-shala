@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Heart, MapPin, Phone, Mail, Clock, Shield, ArrowUpRight } from 'lucide-react'
+import { Heart, MapPin, Phone, Clock, Shield, ArrowUpRight } from 'lucide-react'
+import { GAUSHALA_CONTACT } from '../data/gaushalaContact'
 
 export const Footer = () => {
   return (
@@ -25,36 +26,6 @@ export const Footer = () => {
               Dedicated to the compassionate protection, medical treatment, and peaceful shelter of indigenous Indian cows. Operating 24x7 with specialized veterinary surgeons, ICU wards, and organic green pastures.
             </p>
 
-            <div className="pt-2 flex items-center gap-3">
-              {/* Social links */}
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-stone-800 hover:bg-gau-green-600 hover:text-white flex items-center justify-center transition-colors text-stone-400"
-                aria-label="Facebook"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-stone-800 hover:bg-pink-600 hover:text-white flex items-center justify-center transition-colors text-stone-400"
-                aria-label="Instagram"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-              </a>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noreferrer"
-                className="w-9 h-9 rounded-lg bg-stone-800 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-colors text-stone-400"
-                aria-label="YouTube"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>
-              </a>
-            </div>
           </div>
 
           {/* Col 2: Quick Links */}
@@ -79,13 +50,13 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/health" className="hover:text-amber-400 transition-colors flex items-center gap-1.5">
-                  <ArrowUpRight className="w-3.5 h-3.5 opacity-60" /> Cow Health Tracker
+                <Link to="/donate-a-cow" className="hover:text-amber-400 transition-colors flex items-center gap-1.5">
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-60" /> Donate a Cow
                 </Link>
               </li>
               <li>
                 <Link to="/find-me" className="hover:text-amber-400 transition-colors flex items-center gap-1.5">
-                  <ArrowUpRight className="w-3.5 h-3.5 opacity-60" /> Find Me (Missing Cows)
+                  <ArrowUpRight className="w-3.5 h-3.5 opacity-60" /> Find Our Gaushala
                 </Link>
               </li>
               <li>
@@ -109,21 +80,17 @@ export const Footer = () => {
             <ul className="space-y-3 text-sm text-stone-300">
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-amber-500 shrink-0 mt-1" />
-                <span>GauSeva Sanctuary, Vedic Marg, Mathura-Vrindavan Road, UP 281001</span>
+                <span>Roorkee, Uttarakhand 247667</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span>+91 98765 43210 / 1800-120-4287</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-amber-500 shrink-0" />
-                <span>seva@gauseva.org</span>
+                <span className="flex flex-col">{GAUSHALA_CONTACT.phoneNumbers.map((phone) => <a key={phone.href} href={phone.href} className="hover:text-white">{phone.display}</a>)}</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Clock className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium text-white">Visiting Timings:</p>
-                  <p className="text-xs text-stone-400">Daily 6:00 AM – 12:00 PM & 3:30 PM – 7:30 PM</p>
+                  <p className="text-xs text-stone-400">Daily 6:00 AM – 8:00 PM</p>
                 </div>
               </li>
             </ul>
@@ -132,19 +99,16 @@ export const Footer = () => {
           {/* Col 4: Trust & Transparency */}
           <div className="space-y-4">
             <h4 className="text-white font-serif text-lg font-semibold mb-4 border-l-2 border-amber-500 pl-2.5">
-              Tax Exemption & Trust
+              Donation Information
             </h4>
             <div className="bg-stone-800/80 p-4 rounded-xl border border-stone-700/60 space-y-2 text-xs">
               <div className="flex items-center gap-2 text-emerald-400 font-bold">
                 <Shield className="w-4 h-4" />
-                <span>Registered Trust & 80G Certified</span>
+                <span>UPI donations</span>
               </div>
               <p className="text-stone-400 leading-relaxed">
-                All donations to GauSeva are eligible for tax deductions under Section 80G of the Indian Income Tax Act.
+                Donation acknowledgements remain pending until the Gaushala verifies the submitted UPI reference number.
               </p>
-              <div className="pt-2 border-t border-stone-700 text-[11px] text-amber-300">
-                Reg No: GAUSEVA/80G/2021/UP-091
-              </div>
             </div>
 
             <Link
@@ -165,8 +129,6 @@ export const Footer = () => {
             <Link to="/about" className="hover:text-stone-400">Privacy Policy</Link>
             <span>•</span>
             <Link to="/about" className="hover:text-stone-400">Terms of Seva</Link>
-            <span>•</span>
-            <Link to="/admin/login" className="hover:text-stone-400 text-stone-400">Staff Portal</Link>
           </div>
         </div>
       </div>

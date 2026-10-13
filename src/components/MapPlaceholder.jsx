@@ -5,7 +5,7 @@ export const MapPlaceholder = ({
   locations = [],
   selectedId = null,
   onSelectLocation = () => {},
-  centerLocation = 'Mathura-Vrindavan Sanctuary Perimeter',
+  centerLocation = 'Roorkee, Uttarakhand',
   height = 'h-96'
 }) => {
   const [zoom, setZoom] = useState(13)
@@ -158,12 +158,12 @@ export const MapPlaceholder = ({
           <span>Recovered</span>
         </div>
         <a
-          href="https://www.google.com/maps/place/Mathura,+Uttar+Pradesh"
+          href="https://maps.app.goo.gl/hzwPvoyDu5nW9D9A9"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-1 font-semibold text-gau-green-700 hover:text-gau-green-800"
         >
-          <span>Open Full Satellite Coordinates</span>
+          <span>Open Gaushala in Google Maps</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { Shield, Lock, Mail, ArrowRight, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Shield, Lock, Mail, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { isSupabaseConfigured } from '../services/supabase'
 
 export const AdminLogin = () => {
   const [email, setEmail] = useState('')
@@ -30,12 +31,6 @@ export const AdminLogin = () => {
     }
   }
 
-  const handleFillDemo = () => {
-    setEmail('admin@gauseva.org')
-    setPassword('admin123')
-    setError('')
-  }
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full space-y-8 bg-white p-8 sm:p-10 rounded-3xl border border-stone-200 shadow-warm">
@@ -53,26 +48,17 @@ export const AdminLogin = () => {
           </p>
         </div>
 
-        {/* Demo Credentials Helper Pill */}
-        <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl space-y-2 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-amber-900 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              Demo Credentials Available
-            </span>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="font-bold text-amber-700 hover:text-amber-900 underline text-[11px]"
-            >
-              Auto-Fill Demo Admin
-            </button>
+        {/* Admin access requires Supabase Auth and an approved admin_users entry. */}
+        {!isSupabaseConfigured ? (
+          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900">
+            Admin sign-in is disabled until Supabase Auth is configured for this site.
           </div>
-          <p className="text-amber-800 text-[11px]">
-            Email: <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-200">admin@gauseva.org</code><br />
-            Password: <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-200">admin123</code>
-          </p>
-        </div>
+        ) : (
+          <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl space-y-1.5 text-xs text-emerald-900">
+            <p className="font-bold">Supabase admin sign-in</p>
+            <p>Use the email and password for an account created in Supabase. The account must also be listed in the <code className="font-mono">admin_users</code> table.</p>
+          </div>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -120,8 +106,8 @@ export const AdminLogin = () => {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-gau-green-700 hover:bg-gau-green-800 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+            disabled={loading || !isSupabaseConfigured}
+            className="w-full py-3 bg-gau-green-700 hover:bg-gau-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
           >
             {loading ? (
               <span>Authenticating...</span>

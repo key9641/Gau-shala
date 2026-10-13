@@ -711,12 +711,12 @@ export const initialDonations = [
 export const initialSettings = {
   gaushala_name: 'Shree Krishna GauSeva Ashram & Hospital',
   tagline: 'Serving Cows, Serving Humanity with Vedic Devotion and Modern Medicine',
-  upi_id: 'gaushala@upi',
-  qr_code_image: 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=gaushala@upi&pn=GauSeva%20Gaushala&cu=INR',
-  phone: '+91 98765 43210',
-  helpline: '1800-120-GAUSEVA (4287)',
-  email: 'seva@gauseva.org',
-  address: 'GauSeva Sanctuary, Vedic Marg, Mathura-Vrindavan Road, Uttar Pradesh, 281001',
-  visiting_hours: 'Daily: 6:00 AM – 12:00 PM & 3:30 PM – 7:30 PM',
+  upi_id: '9319966886ml@pnb',
+  qr_code_image: '',
+  phone: '+91 98370 49751',
+  helpline: '+91 98370 49751',
+  email: '',
+  address: 'VV9H+2JP, BSM College Road, near Kaushik Pathology Clinic, Chow Mandi, Chand Puri Nagar, Roorkee, Uttarakhand 247667',
+  visiting_hours: 'Daily: 6:00 AM – 8:00 PM',
   vet_on_duty: 'Dr. Rajesh Sharma & Dr. Anita Joshi (24x7 Ambulance on call)'
 };

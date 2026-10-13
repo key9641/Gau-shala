@@ -105,6 +105,12 @@ CREATE TABLE IF NOT EXISTS public.settings (
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Only user IDs explicitly added by an operator are administrators.
+CREATE TABLE IF NOT EXISTS public.admin_users (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- 9. ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.breeds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cows ENABLE ROW LEVEL SECURITY;
@@ -113,27 +119,64 @@ ALTER TABLE public.missing_cows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sightings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.donations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON public.admin_users FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.admin_users TO authenticated;
+DROP POLICY IF EXISTS "Admins can view their own admin entry" ON public.admin_users;
+CREATE POLICY "Admins can view their own admin entry"
+    ON public.admin_users
+    FOR SELECT
+    TO authenticated
+    USING (user_id = (SELECT auth.uid()));
 
 -- Public Read Policies (Allow anyone to view Gaushala cows, breeds, missing reports)
 CREATE POLICY "Public cows are viewable by everyone" ON public.cows FOR SELECT USING (true);
 CREATE POLICY "Public breeds are viewable by everyone" ON public.breeds FOR SELECT USING (true);
 CREATE POLICY "Public missing cows are viewable by everyone" ON public.missing_cows FOR SELECT USING (true);
-CREATE POLICY "Public health records are viewable by everyone" ON public.health_records FOR SELECT USING (true);
 CREATE POLICY "Public settings are viewable by everyone" ON public.settings FOR SELECT USING (true);
 
 -- Public Insert Policies (Visitors can submit donation claims and sightings)
 CREATE POLICY "Anyone can report a sighting" ON public.sightings FOR INSERT WITH CHECK (true);
 CREATE POLICY "Anyone can submit a donation claim" ON public.donations FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public can view verified donations" ON public.donations FOR SELECT USING (true);
+CREATE POLICY "Public can view verified donations" ON public.donations FOR SELECT USING (verification_status = 'verified');
 
--- Admin Full Access Policies (Authenticated users can insert/update/delete)
-CREATE POLICY "Admin can modify cows" ON public.cows FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can modify breeds" ON public.breeds FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can modify health records" ON public.health_records FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can modify missing cows" ON public.missing_cows FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can modify sightings" ON public.sightings FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can modify donations" ON public.donations FOR ALL USING (auth.role() = 'authenticated');
-CREATE POLICY "Admin can modify settings" ON public.settings FOR ALL USING (auth.role() = 'authenticated');
+-- Admin access is restricted to IDs in admin_users, not every signed-in account.
+DROP POLICY IF EXISTS "Admin can modify cows" ON public.cows;
+CREATE POLICY "Admin can modify cows" ON public.cows FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())));
+
+DROP POLICY IF EXISTS "Admin can modify breeds" ON public.breeds;
+CREATE POLICY "Admin can modify breeds" ON public.breeds FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())));
+
+DROP POLICY IF EXISTS "Admin can modify health records" ON public.health_records;
+DROP POLICY IF EXISTS "Public health records are viewable by everyone" ON public.health_records;
+CREATE POLICY "Admin can modify health records" ON public.health_records FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())));
+
+DROP POLICY IF EXISTS "Admin can modify missing cows" ON public.missing_cows;
+CREATE POLICY "Admin can modify missing cows" ON public.missing_cows FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())));
+
+DROP POLICY IF EXISTS "Admin can modify sightings" ON public.sightings;
+CREATE POLICY "Admin can modify sightings" ON public.sightings FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())));
+
+DROP POLICY IF EXISTS "Admin can modify donations" ON public.donations;
+CREATE POLICY "Admin can modify donations" ON public.donations FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())));
+
+DROP POLICY IF EXISTS "Admin can modify settings" ON public.settings;
+CREATE POLICY "Admin can modify settings" ON public.settings FOR ALL TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.admin_users au WHERE au.user_id = (SELECT auth.uid())));
 
 -- 10. REALTIME CONFIGURATION
 ALTER PUBLICATION supabase_realtime ADD TABLE public.cows;

@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   MISSING: 'gauseva_missing_cows',
   SIGHTINGS: 'gauseva_sightings',
   DONATIONS: 'gauseva_donations',
+  ENQUIRIES: 'gauseva_enquiries',
   SETTINGS: 'gauseva_settings'
 }
 
@@ -53,6 +54,9 @@ export const initializeDataStore = () => {
   }
   if (!localStorage.getItem(STORAGE_KEYS.DONATIONS)) {
     setLocal(STORAGE_KEYS.DONATIONS, initialDonations)
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.ENQUIRIES)) {
+    setLocal(STORAGE_KEYS.ENQUIRIES, [])
   }
   if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
     setLocal(STORAGE_KEYS.SETTINGS, initialSettings)
@@ -221,9 +225,9 @@ export const fetchDonations = async () => {
 
 export const submitDonationClaim = async (donationData) => {
   if (isSupabaseConfigured) {
-    const { data, error } = await supabase.from('donations').insert([donationData]).select()
+    const { error } = await supabase.from('donations').insert([donationData])
     if (error) throw error
-    return data[0]
+    return { ...donationData, verification_status: 'pending' }
   }
   const items = getLocal(STORAGE_KEYS.DONATIONS, initialDonations)
   const newDonation = {
@@ -253,6 +257,57 @@ export const updateDonationVerification = async (id, status) => {
   throw new Error('Donation record not found')
 }
 
+// ---- ENQUIRIES API ----
+export const fetchEnquiries = async () => {
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('enquiries')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  }
+  return getLocal(STORAGE_KEYS.ENQUIRIES, [])
+}
+
+export const saveEnquiry = async (enquiryData) => {
+  if (isSupabaseConfigured) {
+    const { error } = await supabase.from('enquiries').insert([enquiryData])
+    if (error) throw error
+    return { ...enquiryData, status: 'new' }
+  }
+
+  const enquiries = getLocal(STORAGE_KEYS.ENQUIRIES, [])
+  const newEnquiry = {
+    ...enquiryData,
+    id: `e_${Date.now()}`,
+    status: 'new',
+    created_at: new Date().toISOString()
+  }
+  setLocal(STORAGE_KEYS.ENQUIRIES, [newEnquiry, ...enquiries])
+  return newEnquiry
+}
+
+export const updateEnquiryStatus = async (id, status) => {
+  if (isSupabaseConfigured) {
+    const { data, error } = await supabase
+      .from('enquiries')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
+
+  const enquiries = getLocal(STORAGE_KEYS.ENQUIRIES, [])
+  const index = enquiries.findIndex(enquiry => enquiry.id === id)
+  if (index === -1) throw new Error('Enquiry not found')
+  enquiries[index] = { ...enquiries[index], status }
+  setLocal(STORAGE_KEYS.ENQUIRIES, enquiries)
+  return enquiries[index]
+}
+
 // ---- SETTINGS API ----
 export const fetchSettings = async () => {
   if (isSupabaseConfigured) {
@@ -277,5 +332,6 @@ export const resetDataStore = () => {
   setLocal(STORAGE_KEYS.MISSING, initialMissingCows)
   setLocal(STORAGE_KEYS.SIGHTINGS, initialSightings)
   setLocal(STORAGE_KEYS.DONATIONS, initialDonations)
+  setLocal(STORAGE_KEYS.ENQUIRIES, [])
   setLocal(STORAGE_KEYS.SETTINGS, initialSettings)
 }

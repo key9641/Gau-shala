@@ -2,14 +2,13 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import {
   Heart,
-  Stethoscope,
+  MapPin,
   Search,
   BookOpen,
   ArrowRight,
   ShieldCheck,
   Award,
   Sparkles,
-  PhoneCall,
   ChevronRight
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
@@ -19,7 +18,7 @@ import { CowCard } from '../components/CowCard'
 export const Home = () => {
   const { stats, cows, loading } = useData()
 
-  // Highlight 3 featured cows needing support or special care
+  // Show a few residents from the cow directory
   const featuredCows = cows.slice(0, 3)
 
   return (
@@ -61,20 +60,20 @@ export const Home = () => {
                   <span>Donate Now</span>
                 </Link>
 
-                <Link
-                  to="/health"
+                <a
+                  href="#featured-residents"
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl text-base font-bold text-gau-green-900 bg-white border border-gau-brown-200 hover:bg-stone-50 hover:border-gau-green-600 shadow-soft transition-all duration-200"
                 >
                   <span>Explore Our Cows</span>
                   <ArrowRight className="w-4 h-4 text-gau-green-700" />
-                </Link>
+                </a>
               </div>
 
               {/* Trust badges */}
               <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-stone-500 font-medium">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-gau-green-600" />
-                  100% Tax Exemption (80G)
+                  Direct UPI Donations
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Award className="w-4 h-4 text-amber-600" />
@@ -89,27 +88,26 @@ export const Home = () => {
 
             {/* Right Hero Image Card */}
             <div className="lg:col-span-5 relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/5] sm:aspect-square lg:aspect-[4/5] group">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white aspect-[4/3] bg-white">
                 <img
-                  src="https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&w=1200&q=85"
-                  alt="Gaushala Cow at GauSeva"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  src="/images/cow-feeding-at-gauseva.jpeg"
+                  alt="Cows gathered around a feeding trough at GauSeva Gaushala"
+                  className="w-full h-full object-contain"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
-                
-                {/* Floating card on image */}
-                <div className="absolute bottom-6 inset-x-6 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-stone-200/80 shadow-lg">
+              </div>
+
+              {/* Caption below the photo keeps every part of the image visible. */}
+              <div className="mt-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-stone-200/80 shadow-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[11px] uppercase font-bold tracking-wider text-amber-600">Sanctuary Resident #001</p>
-                      <h4 className="font-serif font-bold text-stone-900 text-lg">Nandini (Pure Gir)</h4>
-                      <p className="text-xs text-stone-500">Rescued 2 years ago • Mother of Krishna</p>
+                      <p className="text-[11px] uppercase font-bold tracking-wider text-amber-600">Daily Gaushala Care</p>
+                      <h4 className="font-serif font-bold text-stone-900 text-lg">Nourishment for Every Cow</h4>
+                      <p className="text-xs text-stone-500">Fresh fodder, attentive care, and a safe home</p>
                     </div>
                     <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
-                      Healthy & Loved
+                      At GauSeva
                     </span>
                   </div>
-                </div>
               </div>
             </div>
 
@@ -124,27 +122,13 @@ export const Home = () => {
           <h2 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">Current Gaushala Statistics</h2>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             icon={Heart}
             title="Total Cows"
             value={loading ? '...' : stats.totalCows}
             subtext="In Sanctuary"
             color="green"
-          />
-          <StatCard
-            icon={ShieldCheck}
-            title="Healthy Cows"
-            value={loading ? '...' : stats.healthyCows}
-            subtext="Thriving & fit"
-            color="green"
-          />
-          <StatCard
-            icon={Stethoscope}
-            title="Under Treatment"
-            value={loading ? '...' : stats.underTreatment + stats.underObservation + stats.criticalCows}
-            subtext="Active medical care"
-            color="saffron"
           />
           <StatCard
             icon={Search}
@@ -170,7 +154,7 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* 3. FOUR MAJOR FEATURE CARDS */}
+      {/* 3. MAIN FEATURE CARDS */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
           <span className="text-xs font-bold tracking-widest uppercase text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
@@ -180,11 +164,11 @@ export const Home = () => {
             Everything You Need to Connect & Serve
           </h2>
           <p className="text-stone-600 text-sm sm:text-base">
-            From seamless transparent UPI donations to individual health logs and community-driven missing cow tracking, explore our platform features.
+            From UPI donations to cow profiles and community-driven missing cow tracking, explore our platform features.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Card 1: Donate */}
           <div className="bg-white rounded-2xl p-6 border border-stone-200/80 shadow-soft hover:shadow-soft-lg hover:border-amber-400 transition-all duration-300 flex flex-col justify-between group">
@@ -194,7 +178,7 @@ export const Home = () => {
               </div>
               <h3 className="text-xl font-serif font-bold text-stone-900">1. Donate & Sponsor</h3>
               <p className="text-sm text-stone-600 leading-relaxed">
-                Support our Gaushala financially. Feed cows with nutritious green fodder (Gau-Gras), sponsor ICU medicines, and download instant 80G tax receipts.
+                Support the Gaushala with a UPI donation. Submit your UTR after payment to receive an acknowledgement while the payment is verified.
               </p>
             </div>
             <Link
@@ -206,53 +190,33 @@ export const Home = () => {
             </Link>
           </div>
 
-          {/* Card 2: Cow Health */}
+          {/* Card 2: Find the Gaushala */}
           <div className="bg-white rounded-2xl p-6 border border-stone-200/80 shadow-soft hover:shadow-soft-lg hover:border-emerald-400 transition-all duration-300 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                <Stethoscope className="w-7 h-7" />
+                <MapPin className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-serif font-bold text-stone-900">2. Cow Health Tracker</h3>
+              <h3 className="text-xl font-serif font-bold text-stone-900">2. Visit Our Gaushala</h3>
               <p className="text-sm text-stone-600 leading-relaxed">
-                Monitor individual health conditions, view veterinary timeline records, vaccination status, and checkup schedules with clear color-coded badges.
-              </p>
-            </div>
-            <Link
-              to="/health"
-              className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 group-hover:translate-x-1 transition-transform"
-            >
-              <span>View Health Dashboard</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Card 3: Find Me */}
-          <div className="bg-white rounded-2xl p-6 border border-stone-200/80 shadow-soft hover:shadow-soft-lg hover:border-rose-400 transition-all duration-300 flex flex-col justify-between group">
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                <Search className="w-7 h-7" />
-              </div>
-              <h3 className="text-xl font-serif font-bold text-stone-900">3. Find Me (Missing Cows)</h3>
-              <p className="text-sm text-stone-600 leading-relaxed">
-                Help locate missing cows through GPS coordinate markers, photo cards, and report public sightings directly with instant photo uploads.
+                Find our gaushala in Roorkee, check visiting hours, and get directions to come meet the cows.
               </p>
             </div>
             <Link
               to="/find-me"
-              className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 hover:text-rose-800 group-hover:translate-x-1 transition-transform"
+              className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 group-hover:translate-x-1 transition-transform"
             >
-              <span>Search & Report Sightings</span>
+              <span>Find us in Roorkee</span>
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
 
-          {/* Card 4: Cow Breeds */}
+          {/* Card 3: Cow Breeds */}
           <div className="bg-white rounded-2xl p-6 border border-stone-200/80 shadow-soft hover:shadow-soft-lg hover:border-blue-400 transition-all duration-300 flex flex-col justify-between group">
             <div className="space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
                 <BookOpen className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-serif font-bold text-stone-900">4. Breeds & AI ID</h3>
+              <h3 className="text-xl font-serif font-bold text-stone-900">3. Breeds & AI ID</h3>
               <p className="text-sm text-stone-600 leading-relaxed">
                 Explore indigenous breeds like Gir, Sahiwal, and Tharparkar. View population distribution charts and test the AI breed identification upload interface.
               </p>
@@ -270,21 +234,14 @@ export const Home = () => {
       </section>
 
       {/* 4. FEATURED RESIDENTS SPOTLIGHT */}
-      <section className="bg-gau-cream/50 py-16 border-y border-stone-200/60">
+      <section id="featured-residents" className="bg-gau-cream/50 py-16 border-y border-stone-200/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
             <div>
               <span className="text-xs font-bold tracking-widest uppercase text-gau-green-700">Resident Spotlights</span>
               <h2 className="text-3xl font-serif font-bold text-stone-900 mt-1">Cows Under Loving Care</h2>
-              <p className="text-stone-600 text-sm mt-1">Explore profiles, daily diets, and medical recovery notes.</p>
+              <p className="text-stone-600 text-sm mt-1">Meet a few of the cows living in our sanctuary.</p>
             </div>
-            <Link
-              to="/health"
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-gau-green-800 hover:text-gau-green-900"
-            >
-              <span>View All {cows.length} Cows</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

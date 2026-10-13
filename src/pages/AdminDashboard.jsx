@@ -1,9 +1,8 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   LayoutDashboard,
   Heart,
-  Stethoscope,
   Search,
   BookOpen,
   DollarSign,
@@ -13,7 +12,6 @@ import {
   Trash2,
   Eye,
   CheckCircle2,
-  AlertTriangle,
   Upload,
   Save,
   RotateCcw,
@@ -21,10 +19,13 @@ import {
   X,
   ExternalLink,
   Shield,
-  FileText
+  Mail
 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { GAUSHALA_CONTACT } from '../data/gaushalaContact'
+import { GAUSHALA_LOCATION } from '../data/gaushalaLocation'
+import { isSupabaseConfigured, supabase } from '../services/supabase'
 import { HealthBadge } from '../components/HealthBadge'
 import { StatCard } from '../components/StatCard'
 import { Modal } from '../components/Modal'
@@ -36,6 +37,7 @@ export const AdminDashboard = () => {
     missingCows,
     sightings,
     donations,
+    enquiries,
     settings,
     stats,
     addCow,
@@ -43,6 +45,8 @@ export const AdminDashboard = () => {
     deleteCow,
     updateMissingStatus,
     verifyDonation,
+    refreshEnquiries,
+    changeEnquiryStatus,
     updateSettings,
     resetAllData,
     showToast
@@ -50,7 +54,37 @@ export const AdminDashboard = () => {
 
   const { user, logout } = useAuth()
 
-  // Active Tab: 'overview' | 'cows' | 'health' | 'missing' | 'breeds' | 'donations' | 'settings'
+  useEffect(() => {
+    refreshEnquiries().catch((err) => {
+      console.error('Failed to load enquiries:', err)
+      showToast(err.message || 'Could not load enquiries. Check the Supabase setup and admin access.', 'error')
+    })
+  }, [refreshEnquiries, showToast])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      const handleLocalEnquiryChange = (event) => {
+        if (event.key === 'gauseva_enquiries') {
+          refreshEnquiries().catch(err => console.error('Could not refresh local enquiries:', err))
+        }
+      }
+      window.addEventListener('storage', handleLocalEnquiryChange)
+      return () => window.removeEventListener('storage', handleLocalEnquiryChange)
+    }
+
+    const channel = supabase
+      .channel('admin-enquiries')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'enquiries' }, () => {
+        refreshEnquiries().catch(err => console.error('Could not refresh Supabase enquiries:', err))
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [refreshEnquiries])
+
+  // Active Tab: 'overview' | 'cows' | 'missing' | 'breeds' | 'donations' | 'enquiries' | 'settings'
   const [activeTab, setActiveTab] = useState('overview')
 
   // Search & Filter within Admin Tables
@@ -68,12 +102,7 @@ export const AdminDashboard = () => {
     color: 'Reddish Dun',
     weight: '380',
     photo_url: '',
-    health_status: 'healthy',
     location: 'Shed A - Main Sanctuary',
-    assigned_vet: 'Dr. Rajesh Sharma (B.V.Sc)',
-    treatment: 'Regular organic green fodder and vitamins',
-    last_checkup: new Date().toISOString().split('T')[0],
-    next_checkup: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   })
   const [cowPhotoPreview, setCowPhotoPreview] = useState('')
 
@@ -83,10 +112,10 @@ export const AdminDashboard = () => {
   // Settings Form State
   const [settingsForm, setSettingsForm] = useState(() => ({
     gaushala_name: settings?.gaushala_name || 'Shree Krishna GauSeva Ashram & Hospital',
-    upi_id: settings?.upi_id || 'gaushala@upi',
-    phone: settings?.phone || '+91 98765 43210',
-    email: settings?.email || 'seva@gauseva.org',
-    address: settings?.address || 'VV9H+2JP, BSM College Road, near Kaushik Pathology Clinic - Best Pathology Lab in Roorkee | Pathology Lab in Roorkee| Blood Test in Roorkee, Chow Mandi, Chand Puri Nagar, Roorkee, Uttarakhand 247667'
+    upi_id: settings?.upi_id && settings.upi_id !== 'gaushala@upi' ? settings.upi_id : GAUSHALA_CONTACT.upiId,
+    phone: settings?.phone && settings.phone !== '+91 98765 43210' ? settings.phone : GAUSHALA_CONTACT.phoneNumbers[0].display,
+    email: settings?.email === 'seva@gauseva.org' ? '' : settings?.email || '',
+    address: settings?.address || GAUSHALA_LOCATION.address
   }))
 
   // Handle Opening Cow Add Modal
@@ -102,12 +131,7 @@ export const AdminDashboard = () => {
       color: 'Reddish Dun',
       weight: '360',
       photo_url: 'https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&w=800&q=80',
-      health_status: 'healthy',
       location: 'Shed A - Main Sanctuary',
-      assigned_vet: 'Dr. Rajesh Sharma (B.V.Sc)',
-      treatment: 'Standard green napier grass & mineral block',
-      last_checkup: new Date().toISOString().split('T')[0],
-      next_checkup: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     })
     setCowPhotoPreview('https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&w=800&q=80')
     setIsCowModalOpen(true)
@@ -125,12 +149,7 @@ export const AdminDashboard = () => {
       color: cow.color || '',
       weight: (cow.weight || '').toString(),
       photo_url: cow.photo_url || '',
-      health_status: cow.health_status,
       location: cow.location || '',
-      assigned_vet: cow.assigned_vet || '',
-      treatment: cow.treatment || '',
-      last_checkup: cow.last_checkup || '',
-      next_checkup: cow.next_checkup || ''
     })
     setCowPhotoPreview(cow.photo_url || '')
     setIsCowModalOpen(true)
@@ -189,8 +208,7 @@ export const AdminDashboard = () => {
     e.preventDefault()
     await updateSettings({
       ...settings,
-      ...settingsForm,
-      qr_code_image: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi://pay?pa=${encodeURIComponent(settingsForm.upi_id)}&pn=GauSeva%20Gaushala&cu=INR`
+      ...settingsForm
     })
   }
 
@@ -205,10 +223,10 @@ export const AdminDashboard = () => {
   const navTabs = [
     { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
     { id: 'cows', label: `Manage Cows (${cows.length})`, icon: Heart },
-    { id: 'health', label: 'Cow Health & Records', icon: Stethoscope },
     { id: 'missing', label: `Missing Alerts (${missingCows.length})`, icon: Search },
     { id: 'breeds', label: `Breeds (${breeds.length})`, icon: BookOpen },
     { id: 'donations', label: `Donations (${donations.length})`, icon: DollarSign },
+    { id: 'enquiries', label: `Enquiries (${enquiries.filter(enquiry => enquiry.status === 'new').length})`, icon: Mail },
     { id: 'settings', label: 'Settings & UPI', icon: SettingsIcon },
   ]
 
@@ -281,10 +299,8 @@ export const AdminDashboard = () => {
       {activeTab === 'overview' && (
         <div className="space-y-8 animate-in fade-in duration-200">
           {/* Key Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
             <StatCard icon={Heart} title="Total Cows" value={stats.totalCows} color="green" />
-            <StatCard icon={CheckCircle2} title="Healthy" value={stats.healthyCows} color="green" />
-            <StatCard icon={Stethoscope} title="Under Treatment" value={stats.underTreatment} color="saffron" />
             <StatCard icon={Search} title="Missing" value={stats.missingCowsCount} color="rose" />
             <StatCard icon={CheckCircle2} title="Found" value={stats.foundCowsCount} color="green" />
             <StatCard icon={BookOpen} title="Breeds" value={stats.breedsCount} color="amber" />
@@ -292,7 +308,7 @@ export const AdminDashboard = () => {
           </div>
 
           {/* Quick Management Shortcuts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             
             {/* Quick Cows summary */}
             <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-soft space-y-4">
@@ -312,7 +328,7 @@ export const AdminDashboard = () => {
                       <strong className="text-stone-900">{c.name}</strong>
                       <span className="text-stone-400 ml-1.5">({c.cow_id})</span>
                     </div>
-                    <HealthBadge status={c.health_status} size="sm" />
+                    <span className="text-[11px] text-stone-500">{c.breed || c.breed_name || `${c.age} years`}</span>
                   </div>
                 ))}
               </div>
@@ -370,6 +386,40 @@ export const AdminDashboard = () => {
               </div>
             </div>
 
+            {/* Recent Contact Enquiries */}
+            <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-soft space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-serif font-bold text-lg text-stone-900">Recent Enquiries</h3>
+                <button
+                  onClick={() => setActiveTab('enquiries')}
+                  className="text-xs text-gau-green-700 font-bold hover:underline whitespace-nowrap"
+                >
+                  View All ({enquiries.length})
+                </button>
+              </div>
+              {enquiries.length ? (
+                <div className="space-y-2">
+                  {enquiries.slice(0, 3).map(enquiry => (
+                    <button
+                      key={enquiry.id}
+                      onClick={() => setActiveTab('enquiries')}
+                      className="w-full text-left p-3 rounded-xl bg-stone-50 border border-stone-100 hover:border-gau-green-200 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <strong className="text-stone-900 truncate">{enquiry.name}</strong>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          enquiry.status === 'new' ? 'bg-amber-100 text-amber-800' : 'bg-stone-200 text-stone-600'
+                        }`}>{enquiry.status || 'new'}</span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-stone-500 truncate">{enquiry.subject || 'General Inquiry'} · {enquiry.message}</p>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-stone-500">No enquiries received yet.</p>
+              )}
+            </div>
+
           </div>
         </div>
       )}
@@ -380,7 +430,7 @@ export const AdminDashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
             <div>
               <h2 className="text-2xl font-serif font-bold text-stone-900">Sanctuary Cows Directory</h2>
-              <p className="text-xs text-stone-500 mt-0.5">Register, modify health tags, and manage cow profiles.</p>
+              <p className="text-xs text-stone-500 mt-0.5">Register, update, and manage cow profiles.</p>
             </div>
             <div className="flex items-center gap-3">
               <input
@@ -408,9 +458,7 @@ export const AdminDashboard = () => {
                   <th className="py-3 px-4">Cow / ID</th>
                   <th className="py-3 px-4">Breed</th>
                   <th className="py-3 px-4">Age / Gender</th>
-                  <th className="py-3 px-4">Health Status</th>
                   <th className="py-3 px-4">Assigned Location</th>
-                  <th className="py-3 px-4">Last Checkup</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -432,11 +480,7 @@ export const AdminDashboard = () => {
                     </td>
                     <td className="py-3 px-4 font-medium text-stone-800">{cow.breed}</td>
                     <td className="py-3 px-4">{cow.age} yrs • {cow.gender}</td>
-                    <td className="py-3 px-4">
-                      <HealthBadge status={cow.health_status} size="sm" />
-                    </td>
                     <td className="py-3 px-4 truncate max-w-[150px]">{cow.location || 'Shed A'}</td>
-                    <td className="py-3 px-4">{cow.last_checkup || 'N/A'}</td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
@@ -470,59 +514,7 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* TAB 3: COW HEALTH & CLINICAL TIMELINE */}
-      {activeTab === 'health' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-soft space-y-6 animate-in fade-in duration-200">
-          <div>
-            <h2 className="text-2xl font-serif font-bold text-stone-900">Veterinary Hospital Registry</h2>
-            <p className="text-xs text-stone-500 mt-0.5">Quickly update health status tags or log doctor examinations.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cows.map(cow => (
-              <div key={cow.id} className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-bold text-stone-900">{cow.name}</h4>
-                    <span className="text-[11px] font-mono text-stone-500">{cow.cow_id}</span>
-                  </div>
-                  <HealthBadge status={cow.health_status} size="sm" />
-                </div>
-
-                <div className="text-xs text-stone-600 space-y-1">
-                  <p><strong>Vet:</strong> {cow.assigned_vet || 'Resident Vet'}</p>
-                  <p><strong>Last Exam:</strong> {cow.last_checkup || 'Recently'}</p>
-                  <p className="italic text-stone-500 bg-white p-2 rounded border border-stone-100">
-                    "{cow.treatment || 'Standard fodder and checkup'}"
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-stone-200 flex items-center justify-between gap-2">
-                  <select
-                    value={cow.health_status}
-                    onChange={(e) => updateCow(cow.id, { health_status: e.target.value })}
-                    className="text-xs px-2 py-1 bg-white border border-stone-300 rounded-lg font-semibold"
-                  >
-                    <option value="healthy">Healthy</option>
-                    <option value="under_observation">Under Observation</option>
-                    <option value="under_treatment">Under Treatment</option>
-                    <option value="critical">Critical Care</option>
-                  </select>
-
-                  <button
-                    onClick={() => handleOpenEditCow(cow)}
-                    className="text-xs font-bold text-gau-green-700 hover:underline"
-                  >
-                    Edit History
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: MISSING COWS & SIGHTINGS */}
+      {/* TAB: MISSING COWS & SIGHTINGS */}
       {activeTab === 'missing' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-soft space-y-8 animate-in fade-in duration-200">
           <div>
@@ -707,7 +699,71 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {/* TAB 7: SETTINGS */}
+      {/* TAB 7: CONTACT ENQUIRIES */}
+      {activeTab === 'enquiries' && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-soft space-y-6 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
+            <div>
+              <h2 className="text-2xl font-serif font-bold text-stone-900">Contact Enquiries</h2>
+              <p className="text-xs text-stone-500 mt-0.5">Messages submitted through the Contact page. Reply by phone or email.</p>
+            </div>
+            <button
+              onClick={() => refreshEnquiries().catch(err => showToast(err.message || 'Could not refresh enquiries.', 'error'))}
+              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold rounded-xl transition-colors"
+            >
+              Refresh enquiries
+            </button>
+          </div>
+
+          {enquiries.length ? (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {enquiries.map(enquiry => (
+                <article key={enquiry.id} className="p-5 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-stone-900">{enquiry.name}</h3>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          enquiry.status === 'new' ? 'bg-amber-100 text-amber-800' :
+                          enquiry.status === 'replied' ? 'bg-emerald-100 text-emerald-800' :
+                          'bg-stone-200 text-stone-700'
+                        }`}>{enquiry.status || 'new'}</span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 mt-1">
+                        {enquiry.created_at ? new Date(enquiry.created_at).toLocaleString() : 'Date unavailable'}
+                      </p>
+                    </div>
+                    <select
+                      aria-label={`Update status for ${enquiry.name}'s enquiry`}
+                      value={enquiry.status || 'new'}
+                      onChange={(e) => changeEnquiryStatus(enquiry.id, e.target.value).catch(() => {})}
+                      className="px-2.5 py-2 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-stone-700"
+                    >
+                      <option value="new">New</option>
+                      <option value="read">Read</option>
+                      <option value="replied">Replied</option>
+                    </select>
+                  </div>
+                  <p className="text-sm font-semibold text-gau-green-900">{enquiry.subject || 'General Inquiry'}</p>
+                  <p className="text-sm text-stone-700 whitespace-pre-wrap break-words">{enquiry.message}</p>
+                  <div className="pt-3 border-t border-stone-200 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-5 text-xs">
+                    <a href={`mailto:${enquiry.email}`} className="text-gau-green-800 hover:underline break-all">{enquiry.email}</a>
+                    <a href={`tel:${enquiry.phone}`} className="text-gau-green-800 hover:underline">{enquiry.phone}</a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center rounded-2xl border border-dashed border-stone-300 bg-stone-50">
+              <Mail className="w-8 h-8 mx-auto text-stone-400" />
+              <p className="mt-3 font-semibold text-stone-700">No enquiries yet</p>
+              <p className="mt-1 text-xs text-stone-500">New messages from the Contact page will appear here.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 8: SETTINGS */}
       {activeTab === 'settings' && (
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-soft space-y-6 max-w-3xl animate-in fade-in duration-200">
           <div>
@@ -730,7 +786,7 @@ export const AdminDashboard = () => {
 
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
-                Official UPI ID (Used for Dynamic QR Code generation)
+                Official UPI ID (Shown beside the QR code)
               </label>
               <input
                 type="text"
@@ -738,7 +794,7 @@ export const AdminDashboard = () => {
                 onChange={(e) => setSettingsForm({ ...settingsForm, upi_id: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm font-mono font-bold focus:bg-white focus:outline-none"
               />
-              <p className="text-[11px] text-stone-400 mt-1">Changing this updates the donation QR code and copy button across the entire website immediately.</p>
+              <p className="text-[11px] text-stone-400 mt-1">This changes the displayed UPI ID. If the linked payment account changes, replace the static QR image as well.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -871,23 +927,7 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
-                Health Status *
-              </label>
-              <select
-                value={cowFormData.health_status}
-                onChange={(e) => setCowFormData({ ...cowFormData, health_status: e.target.value })}
-                className="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-bold text-emerald-800"
-              >
-                <option value="healthy">🟢 Healthy</option>
-                <option value="under_observation">🟡 Under Observation</option>
-                <option value="under_treatment">🟠 Under Treatment</option>
-                <option value="critical">🔴 Critical Care</option>
-              </select>
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
                 Approx Weight (kg)
@@ -914,42 +954,15 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
-                Sanctuary Location / Shed
-              </label>
-              <input
-                type="text"
-                value={cowFormData.location}
-                onChange={(e) => setCowFormData({ ...cowFormData, location: e.target.value })}
-                placeholder="e.g. Shed B - Amrit Vatika"
-                className="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
-                Assigned Veterinarian
-              </label>
-              <input
-                type="text"
-                value={cowFormData.assigned_vet}
-                onChange={(e) => setCowFormData({ ...cowFormData, assigned_vet: e.target.value })}
-                className="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs"
-              />
-            </div>
-          </div>
-
           <div>
             <label className="block text-xs font-bold text-stone-700 uppercase tracking-wide mb-1">
-              Current Treatment / Diet Instructions
+              Sanctuary Location / Shed
             </label>
             <input
               type="text"
-              value={cowFormData.treatment}
-              onChange={(e) => setCowFormData({ ...cowFormData, treatment: e.target.value })}
-              placeholder="e.g. Napier grass, mustard oil massage, antibiotic wound dressing"
+              value={cowFormData.location}
+              onChange={(e) => setCowFormData({ ...cowFormData, location: e.target.value })}
+              placeholder="e.g. Shed B - Amrit Vatika"
               className="w-full px-3.5 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs"
             />
           </div>
@@ -1003,7 +1016,7 @@ export const AdminDashboard = () => {
         <div className="space-y-4">
           <p className="text-xs text-stone-600 leading-relaxed">
             Are you sure you want to permanently delete the profile for{' '}
-            <strong>{deleteConfirmCow?.name}</strong> ({deleteConfirmCow?.cow_id})? This will also remove medical and vaccination history for this cow.
+            <strong>{deleteConfirmCow?.name}</strong> ({deleteConfirmCow?.cow_id})? This also removes any records linked to this cow.
           </p>
           <div className="flex items-center justify-end gap-3 pt-2">
             <button

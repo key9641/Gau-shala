@@ -1,43 +1,99 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { isSupabaseConfigured, supabase } from '../services/supabase'
 
 const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('gauseva_auth')
-      return saved ? JSON.parse(saved) : null
-    } catch {
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(isSupabaseConfigured)
+
+  const loadApprovedAdmin = useCallback(async (authUser) => {
+    if (!authUser) return null
+
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', authUser.id)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Could not verify admin access:', error)
       return null
     }
-  })
+    if (!data) return null
+
+    return {
+      ...authUser,
+      name: authUser.user_metadata?.full_name || authUser.email,
+      role: 'admin'
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setAuthLoading(false)
+      return undefined
+    }
+
+    let mounted = true
+    const applySessionUser = async (authUser) => {
+      const approvedAdmin = await loadApprovedAdmin(authUser)
+      if (mounted) {
+        setUser(approvedAdmin)
+        setAuthLoading(false)
+      }
+    }
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) console.error('Could not restore Supabase session:', error)
+      return applySessionUser(data?.session?.user)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Defer the database lookup until after the auth callback completes.
+      setTimeout(() => applySessionUser(session?.user), 0)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [loadApprovedAdmin])
 
   const login = async (email, password) => {
-    // Standard secure-looking authentication check (and Supabase Auth ready)
-    if (email === 'admin@gauseva.org' && password === 'admin123') {
-      const authUser = {
-        id: 'u_admin_1',
-        email,
-        name: 'GauSeva Administrator',
-        role: 'admin',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-        loginTime: new Date().toISOString()
-      }
-      setUser(authUser)
-      localStorage.setItem('gauseva_auth', JSON.stringify(authUser))
-      return { success: true }
-    } else {
-      throw new Error('Invalid email or password. Use demo credentials.')
+    if (!isSupabaseConfigured || !supabase) {
+      throw new Error('Admin sign-in is unavailable until Supabase Auth is configured.')
     }
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+
+    const approvedAdmin = await loadApprovedAdmin(data.user)
+    if (!approvedAdmin) {
+      await supabase.auth.signOut()
+      throw new Error('This Supabase account is not approved for the admin panel. Add its user ID to the admin_users table first.')
+    }
+
+    setUser(approvedAdmin)
+    return { success: true }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    if (isSupabaseConfigured) {
+      const { error } = await supabase.auth.signOut()
+      if (error) console.error('Could not sign out of Supabase:', error)
+    }
     setUser(null)
-    localStorage.removeItem('gauseva_auth')
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin: Boolean(user && user.role === 'admin'), login, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      isAdmin: Boolean(user && user.role === 'admin'),
+      authLoading,
+      login,
+      logout
+    }}>
       {children}
     </AuthContext.Provider>
   )
